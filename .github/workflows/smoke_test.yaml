@@ -1,0 +1,81 @@
+name: pytest
+on:
+    push:
+        branches:
+            - main
+            - patch/**
+    
+    pull_request:
+        branches:
+            - main
+            - patch/**
+
+defaults:
+    run:
+        shell: bash
+
+
+permissions:
+    contents: read # to fetch code (actions/checkout)
+
+jobs:
+    ruff_check:
+        name: Linting using Ruff check
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v6
+            - name: Install UV
+              uses: astral-sh/setup-uv@v5
+            - name: Install the project
+              run: uv sync --all-extras --dev
+            - name: Run tests
+              run: |
+                uv run ruff check src \
+                  --no-fix \
+                  --diff \
+                  --show-files \
+                  --verbose
+
+    mypy:
+        name: Static type checking using MyPy
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v6
+            - name: Install UV
+              uses: astral-sh/setup-uv@v5
+            - name: Install the project
+              run: uv sync --all-extras --dev
+            - name: Run tests
+              run: uv run mypy src
+
+    bandit:
+        name: Security check using Bandit
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v6
+            - name: Install UV
+              uses: astral-sh/setup-uv@v5
+            - name: Install the project
+              run: uv sync --all-extras --dev
+            - name: Run tests
+              run: uv run bandit src -n 3
+
+    smoke_test:
+        name: Smoke test using PyTest
+        needs:
+            - ruff_check
+            - mypy
+            - bandit
+        runs-on: ubuntu-latest
+        steps:
+            - name: checkout
+              uses: actions/checkout@v6
+            - name: Install UV
+              uses: astral-sh/setup-uv@v5
+            - name: Install the project
+              run: uv sync --all-extras --dev
+            - name: Run tests
+              run: uv run pytest tests
